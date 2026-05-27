@@ -59,17 +59,21 @@ Naloxone reverses the antihypertensive effect of clonidine.
 
 #### Entities
 
+```text
 Naloxone  → CHEMICAL
 clonidine → CHEMICAL
+```
 
 ---
 
 ## Project Structure
+## Project Structure
 
+```text
 Medical_Text_Analysis/
 │
 ├── data/
-│   └── processed/
+│   └── preprocessed/
 │
 ├── models/
 │
@@ -78,12 +82,13 @@ Medical_Text_Analysis/
 │
 ├── src/
 │   ├── preprocessing.py
-│   ├── train.py
-│   └── inference.py
+│   ├── train_spacy_ner.py
+│   └── predict.py
 │
 ├── requirements.txt
 ├── README.md
 └── .gitignore
+```
 
 ---
 
@@ -91,28 +96,41 @@ Medical_Text_Analysis/
 
 ## 1. Clone the Repository
 
+```bash
 git clone <your-repository-link>
 cd Medical_Text_Analysis
-
+```
 ---
 
 ## 2. Create a Virtual Environment
 
 ### Windows
 
+```bash
 python -m venv venv
+```
+
+```text
 venv\Scripts\activate
+```
 
 ### Linux / macOS
 
+```bash
 python3 -m venv venv
+```
+
+```text
 source venv/bin/activate
+```
 
 ---
 
 ## 3. Install Dependencies
 
+```bash
 pip install -r requirements.txt
+```
 
 ---
 
@@ -126,13 +144,17 @@ The preprocessing pipeline:
 - creates train/validation/test splits
 - exports processed data into JSON format
 
-Run preprocessing:
+## Run Preprocessing
 
+```bash
 python src/preprocessing.py
+```
 
 Processed files are stored inside:
 
-data/preprocessed/
+```text
+data/processed/
+```
 
 ---
 
@@ -140,7 +162,9 @@ data/preprocessed/
 
 Train the biomedical NER model:
 
+```bash
 python src/train.py
+```
 
 Training includes:
 
@@ -181,9 +205,11 @@ Lithium carbonate toxicity caused congestive heart failure.
 
 ## Output
 
+```text
 Lithium carbonate         → CHEMICAL
 toxicity                  → DISEASE
 congestive heart failure  → DISEASE
+```
 
 ---
 
@@ -191,10 +217,13 @@ congestive heart failure  → DISEASE
 
 Run inference using the trained model:
 
+```bash
 python src/predict.py
+```
 
 Example usage:
 
+```text
 import spacy
 
 nlp = spacy.load("models/biomedical_ner")
@@ -205,6 +234,7 @@ doc = nlp(text)
 
 for ent in doc.ents:
     print(ent.text, ent.label_)
+```
 
 ---
 
