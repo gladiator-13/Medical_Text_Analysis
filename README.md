@@ -1,294 +1,194 @@
-# Medical Text Analysis
+# Biomedical NER on BC5CDR: spaCy vs BioBERT
 
-Biomedical Named Entity Recognition (NER) system for extracting chemical and disease entities from biomedical literature using spaCy and the BC5CDR Dataset.
+Comparing classical and transformer-based Named Entity Recognition for extracting **Chemical** and **Disease** entities from biomedical literature using the BC5CDR benchmark dataset.
+
+---
+
+## Key Findings
+
+- **BioBERT nearly matches published SOTA on Chemical entities** — 94.00% F1 vs published 94.40%, a gap of only 0.40 points
+- **Disease entities are significantly harder** — 84.13% F1 vs published 89.90%, a gap of 5.77 points, suggesting disease names are more context-dependent and harder to detect from surface form alone
+- **Domain-specific pretraining matters** — BioBERT outperforms a spaCy baseline substantially on both entity types
+- **Performance plateaus around epoch 7** — gains reduce from +2.16 F1 (epochs 3→5) to +0.50 F1 (epochs 5→7), indicating diminishing returns beyond this point
+
+---
+
+## Results
+
+### Epoch-wise BioBERT Performance
+
+| Epochs | Precision | Recall | Overall F1 | Chemical F1 | Disease F1 |
+|--------|-----------|--------|------------|-------------|------------|
+| 3 | 84.61% | 89.43% | 86.95% | 92.46% | 80.17% |
+| 5 | 87.80% | 90.46% | 89.11% | 93.61% | 83.54% |
+| **7** | **88.40%** | **90.87%** | **89.61%** | **94.00%** | **84.13%** |
+
+### Model Comparison
+
+| Model | Chemical F1 | Disease F1 | Overall F1 |
+|-------|-------------|------------|------------|
+| spaCy (baseline) | 81.73% | 75.41% | 78.81% |
+| BioBERT (7 epochs) | 94.00% | 84.13% | 89.61% |
+| Published BioBERT | ~93.85% | ~89.16% | ~91.51% |
+| Published SOTA (PubMedBERT) | 94.40% | 89.90% | 92.15% |
+
+> Published numbers from the [BC5CDR leaderboard on Papers With Code](https://paperswithcode.com/sota/named-entity-recognition-on-bc5cdr)
 
 ---
 
 ## Overview
 
-This project builds a domain-specific NLP pipeline capable of identifying biomedical entities from clinical and research text.
+This project builds a complete biomedical NER pipeline — from data preprocessing through model training and evaluation — and compares a classical spaCy-based approach against fine-tuned BioBERT on the BC5CDR benchmark.
 
-The system:
-
-- preprocesses biomedical datasets
-- converts BIO-tagged annotations into spaCy-compatible spans
-- trains a custom spaCy NER model
-- evaluates entity-level performance
-- performs inference on unseen medical text
-
-The project was developed to explore:
-
-- Biomedical NLP pipelines
-- Named Entity Recognition (NER)
-- BIO tagging schemes
-- Sequence labeling
-- NLP training dynamics
-- Evaluation methodologies
-- Modular ML system engineering
+The BC5CDR dataset contains biomedical research abstracts annotated with two entity types:
+- **Chemical** — drug names, chemical compounds (e.g. "acetaminophen", "sodium chloride")
+- **Disease** — disease and condition names (e.g. "hypertension", "acute respiratory failure")
 
 ---
 
-## Features
+## Project Structure
 
-- Biomedical dataset preprocessing
-- BIO tag parsing and span reconstruction
-- Custom spaCy NER training pipeline
-- Validation/test split handling
-- Precision / Recall / F1 evaluation
-- Minibatch optimization training
-- Model persistence and loading
-- Biomedical inference pipeline
-- Modular project architecture
-
----
-
-## Dataset
-
-This project uses the BC5CDR biomedical dataset containing:
-
-- biomedical research abstracts
-- chemical entities
-- disease entities
-- token-level BIO annotations
-
-### Example
-
-#### Input
-
-Naloxone reverses the antihypertensive effect of clonidine.
-
-#### Entities
-
-```text
-Naloxone  → CHEMICAL
-clonidine → CHEMICAL
 ```
-
----
-
-## Project Structure
-## Project Structure
-
-```text
 Medical_Text_Analysis/
 │
 ├── data/
 │   └── preprocessed/
+│       └── spacy/
 │
 ├── models/
+│   └── biobert/
 │
 ├── notebooks/
-│   └── Medical_ner_exploration.ipynb
+│   ├── biobert_pipeline.ipynb
+│   └── biobert_training.ipynb
+│
+├── results/
+│   ├── spacy_metrics/
+│   │   └── spacy_metrics.json
+│   └── biobert_metrics/
+│       ├── model_1epoch.json
+│       ├── model_3epochs.json
+│       ├── model_5epochs.json
+│       ├── model_7epochs.json
+│       └── experiments.csv
 │
 ├── src/
-│   ├── preprocessing.py
-│   ├── train_spacy_ner.py
-│   └── predict.py
+│   ├── common/
+│   │   └── utils.py
+│   ├── spacy_pipeline/
+│   │   ├── preprocessing.py
+│   │   ├── train.py
+│   │   ├── evaluate.py
+│   │   └── inference.py
+│   └── biobert_pipeline/
+│       ├── config.py
+│       ├── dataset.py
+│       ├── train.py
+│       ├── save_model.py
+│       ├── evaluate_model.py
+│       ├── save_metrics.py
+│       ├── predict.py
+│       └── metrics.py
 │
-├── requirements.txt
 ├── README.md
+├── requirements.txt
 └── .gitignore
 ```
 
 ---
 
-# Installation
-
-## 1. Clone the Repository
+## Installation
 
 ```bash
-git clone <your-repository-link>
+git clone <repository-url>
 cd Medical_Text_Analysis
-```
----
-
-## 2. Create a Virtual Environment
-
-### Windows
-
-```bash
 python -m venv venv
-```
-
-```text
-venv\Scripts\activate
-```
-
-### Linux / macOS
-
-```bash
-python3 -m venv venv
-```
-
-```text
-source venv/bin/activate
-```
-
----
-
-## 3. Install Dependencies
-
-```bash
+source venv/bin/activate       # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ---
 
-# Preprocessing Pipeline
+## Usage
 
-The preprocessing pipeline:
-
-- loads the BC5CDR dataset
-- converts BIO tags into entity spans
-- validates annotations
-- creates train/validation/test splits
-- exports processed data into JSON format
-
-## Run Preprocessing
+### spaCy Pipeline
 
 ```bash
-python src/preprocessing.py
+# Preprocess data
+python src/spacy_pipeline/preprocessing.py
+
+# Train spaCy NER model
+python src/spacy_pipeline/train.py
+
+# Evaluate on test set
+python src/spacy_pipeline/evaluate.py
+
+# Run inference on new text
+python src/spacy_pipeline/inference.py
 ```
 
-Processed files are stored inside:
-
-```text
-data/processed/
-```
-
----
-
-# Model Training
-
-Train the biomedical NER model:
+### BioBERT Pipeline
 
 ```bash
-python src/train.py
-```
+# Fine-tune BioBERT on BC5CDR
+python -m src/biobert_pipeline/train.py
 
-Training includes:
+# Evaluate on test set
+python -m src/biobert_pipeline/evaluate_model.py
 
-- spaCy pipeline initialization
-- label registration
-- minibatch optimization
-- validation evaluation
-- model checkpoint persistence
-
----
-
-# Model Evaluation
-
-## Validation Performance
-
-| Metric | Score |
-|---|---|
-| Entity Precision | ~0.83 |
-| Entity Recall | ~0.77 |
-| Entity F1 Score | ~0.80 |
-
----
-
-## Entity-wise Performance
-
-| Entity Type | F1 Score |
-|---|---|
-| CHEMICAL | ~0.84 |
-| DISEASE | ~0.75 |
-
----
-
-# Example Prediction
-
-## Input
-
-Lithium carbonate toxicity caused congestive heart failure.
-
-## Output
-
-```text
-Lithium carbonate         → CHEMICAL
-toxicity                  → DISEASE
-congestive heart failure  → DISEASE
+# Run inference on new text
+python -m src/biobert_pipeline/predict.py
 ```
 
 ---
 
-# Inference
+## Dataset
 
-Run inference using the trained model:
+**BC5CDR (BioCreative V Chemical-Disease Relation)**
 
-```bash
-python src/predict.py
+- Biomedical research abstracts with token-level BIO annotations
+- Two entity types: Chemical, Disease
+- Standard train / validation / test splits
+- Loaded via HuggingFace Datasets: `drAbreu/biocreative_NLP_BC5CDR`
+
+---
+
+## Experiment Tracking
+
+All runs are logged to:
+
+```
+results/biobert_metrics/experiments.csv
 ```
 
-Example usage:
+Each run records: epochs, precision, recall, F1, accuracy.
 
-```text
-import spacy
-
-nlp = spacy.load("models/biomedical_ner")
-
-text = "Aspirin toxicity caused cardiac arrest."
-
-doc = nlp(text)
-
-for ent in doc.ents:
-    print(ent.text, ent.label_)
-```
+Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biobert_metrics/`.
 
 ---
 
-# Concepts Explored
-
-This project explores:
-
-- Named Entity Recognition (NER)
-- Biomedical NLP
-- BIO tagging schemes
-- Span boundary prediction
-- Precision / Recall tradeoffs
-- Minibatch optimization
-- Model persistence
-- NLP pipeline engineering
-
----
-
-# Future Improvements
-
-Potential future extensions include:
-
-- Transformer-based biomedical NER
-- BioBERT integration
-- PubMedBERT fine-tuning
-- Biomedical relation extraction
-- Entity linking
-- Clinical document processing
-- Error analysis dashboards
-- Streamlit/Gradio deployment
-
----
-
-# Technologies Used
+## Stack
 
 - Python
+- PyTorch
+- HuggingFace Transformers + Datasets
+- BioBERT (`dmis-lab/biobert-v1.1`)
 - spaCy
-- Hugging Face Datasets
+- SeqEval
 - NumPy
 
 ---
 
-# Learning Outcomes
+## Roadmap
 
-Through this project:
-
-- biomedical NLP pipelines were implemented from scratch
-- custom NER systems were trained and evaluated
-- training instability and optimization behavior were analyzed
-- modular ML system design principles were applied
-- classical NLP limitations were explored before transitioning to transformer architectures
+- [ ] PubMedBERT fine-tuning and comparison
+- [ ] LoRA parameter-efficient fine-tuning (rank 4 / 8 / 16)
+- [ ] Error analysis — characterising Chemical vs Disease failure modes
+- [ ] Relation extraction (Chemical–Disease pairs)
+- [ ] Gradio inference demo
 
 ---
 
-# License
+## License
 
-This project is intended for educational and research purposes.
+For educational and research purposes.
