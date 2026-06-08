@@ -1,3 +1,4 @@
+# import transformers
 from transformers import (
     AutoModelForTokenClassification,
     AutoTokenizer,
@@ -19,11 +20,11 @@ def main():
     dataset = get_tokenized_dataset()
 
     model = AutoModelForTokenClassification.from_pretrained(
-        "models/biobert/model_7epoch"
+        "models/pubmed_bert/pubmedmodel_5epoch"
     )
 
     tokenizer = AutoTokenizer.from_pretrained(
-        "models/biobert/model_7epoch"
+        "models/pubmed_bert/pubmedmodel_5epoch"
     )
 
     data_collator = DataCollatorForTokenClassification(
@@ -40,7 +41,8 @@ def main():
     results = trainer.evaluate()
 
     record = {
-        "epochs": 7,
+        "model": "PubMedBert",
+        "epochs": 5,
         "learning_rate": 2e-5,
         "batch_size": 8,
         "precision": results["eval_precision"],
@@ -48,7 +50,7 @@ def main():
         "f1": results["eval_f1"]
     }
 
-    file = Path("results/biobert_metrics/experiments.csv")
+    file = Path("results/pubmed_bert_metrics/experiments.csv")
 
     if file.exists() and file.stat().st_size > 0:
         df = pd.read_csv(file)
@@ -146,8 +148,8 @@ def main():
 
     #Saving JSON
     OUTPUT_PATH = (
-        "results/biobert_metrics/"
-        "model_7epochs.json"
+        "results/pubmed_bert_metrics/"
+        "pubmedmodel_5epochs.json"
     )
 
     for key, value in metrics["overall"].items():

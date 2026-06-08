@@ -9,13 +9,17 @@ from dataset import get_tokenized_dataset, tokenizer
 from config import ID2LABEL, LABEL2ID
 from metrics import compute_metrics
 
+models = {
+   "biobert" : "dmis-lab/biobert-v1.1",
+   "pubmed" : "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
+}
 
 def main():
 
     dataset = get_tokenized_dataset()
 
     model = AutoModelForTokenClassification.from_pretrained(
-        "dmis-lab/biobert-v1.1",
+        models["biobert"],
         num_labels=5,
         id2label=ID2LABEL,
         label2id=LABEL2ID
@@ -26,7 +30,7 @@ def main():
     )
 
     training_args = TrainingArguments(
-        output_dir="models/biobert/checkpoints",
+        output_dir="models/biobert/checkpoints", #models/pubmed_bert/MODEL_NAME => for pubmed model
 
         num_train_epochs=7,
 
@@ -62,11 +66,11 @@ def main():
     trainer.train()
 
     trainer.save_model(
-      "models/biobert/model_7epoch"
+      "models/biobert/model_7epoch" #models/pubmed_bert/MODEL_NAME
     )
 
     tokenizer.save_pretrained(
-      "models/biobert/model_7epoch"
+      "models/biobert/model_7epoch" #models/pubmed_bert/MODEL_NAME
     )
 
 

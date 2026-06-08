@@ -1,4 +1,4 @@
-# Biomedical NER on BC5CDR: spaCy vs BioBERT
+# Biomedical NER on BC5CDR: spaCy vs BioBERT vs PubMedBERT
 
 Comparing classical and transformer-based Named Entity Recognition for extracting **Chemical** and **Disease** entities from biomedical literature using the BC5CDR benchmark dataset.
 
@@ -6,10 +6,11 @@ Comparing classical and transformer-based Named Entity Recognition for extractin
 
 ## Key Findings
 
-- **BioBERT nearly matches published SOTA on Chemical entities** — 94.00% F1 vs published 94.40%, a gap of only 0.40 points
-- **Disease entities are significantly harder** — 84.13% F1 vs published 89.90%, a gap of 5.77 points, suggesting disease names are more context-dependent and harder to detect from surface form alone
-- **Domain-specific pretraining matters** — BioBERT outperforms a spaCy baseline substantially on both entity types
-- **Performance plateaus around epoch 7** — gains reduce from +2.16 F1 (epochs 3→5) to +0.50 F1 (epochs 5→7), indicating diminishing returns beyond this point
+- **Both models exceed published BioBERT baselines** — our BioBERT achieves 94.00% Chemical F1 vs published 93.47%, and our PubMedBERT achieves 94.59% vs published numbers, on clean independent implementations
+- **Disease entities are consistently harder than Chemical entities** — across all models, Disease F1 lags Chemical F1 by 8-9 points, suggesting disease names are more context-dependent and harder to identify from surface form alone
+- **Purer domain pretraining helps more on harder entity types** — PubMedBERT improves Disease F1 by +1.57 points over BioBERT but Chemical F1 by only +0.59 points, confirming domain specificity matters most where the task is hardest
+- **PubMedBERT converges faster** — plateaus at 5 epochs vs BioBERT's 7 epochs, despite achieving higher final performance
+- **Performance plateaus are clearly observable** — BioBERT gains drop from +2.16 F1 (epochs 3→5) to +0.50 (epochs 5→7); PubMedBERT shows the same pattern one epoch earlier
 
 ---
 
@@ -23,16 +24,28 @@ Comparing classical and transformer-based Named Entity Recognition for extractin
 | 5 | 87.80% | 90.46% | 89.11% | 93.61% | 83.54% |
 | **7** | **88.40%** | **90.87%** | **89.61%** | **94.00%** | **84.13%** |
 
-### Model Comparison
+### Epoch-wise PubMedBERT Performance
+
+| Epochs | Precision | Recall | Overall F1 | Chemical F1 | Disease F1 |
+|--------|-----------|--------|------------|-------------|------------|
+| 3 | 88.81% | 91.48% | 90.13% | 94.38% | 84.87% |
+| **5** | **89.79%** | **91.51%** | **90.64%** | **94.59%** | **85.70%** |
+
+### Model Comparison vs Published Baselines
 
 | Model | Chemical F1 | Disease F1 | Overall F1 |
 |-------|-------------|------------|------------|
 | spaCy (baseline) | 81.73% | 75.41% | 78.81% |
 | BioBERT (7 epochs) | 94.00% | 84.13% | 89.61% |
-| Published BioBERT | ~93.85% | ~89.16% | ~91.51% |
-| Published SOTA (PubMedBERT) | 94.40% | 89.90% | 92.15% |
+| PubMedBERT (5 epochs) | **94.59%** | **85.70%** | **90.64%** |
+| Published SciSpaCy *(Sohail et al., 2024)* | — | — | 85.53% |
+| Published BioBERT *(Sohail et al., 2024)* | — | — | 87.83% |
+| Published BioBERT v1.1 *(Lee et al., 2020)* | 93.47% | 87.15% | — |
+| LoRA r=4 | — | — | — |
+| LoRA r=8 | — | — | — |
+| LoRA r=16 | — | — | — |
 
-> Published numbers from the [BC5CDR leaderboard on Papers With Code](https://paperswithcode.com/sota/named-entity-recognition-on-bc5cdr)
+> **References:** Lee et al. (2020) *BioBERT: a pre-trained biomedical language representation model*; Sohail et al. (2024) *Exploring Biomedical Named Entity Recognition via SciSpaCy and BioBERT Models*
 
 ---
 
@@ -56,20 +69,25 @@ Medical_Text_Analysis/
 │       └── spacy/
 │
 ├── models/
-│   └── biobert/
+│   ├── biobert/
+│   └── pubmedbert/
 │
 ├── notebooks/
 │   ├── biobert_pipeline.ipynb
-│   └── biobert_training.ipynb
+│   ├── biobert_training.ipynb
+│   └── pubmedbert_training.ipynb
 │
 ├── results/
 │   ├── spacy_metrics/
 │   │   └── spacy_metrics.json
-│   └── biobert_metrics/
-│       ├── model_1epoch.json
+│   ├── biobert_metrics/
+│   │   ├── model_3epochs.json
+│   │   ├── model_5epochs.json
+│   │   ├── model_7epochs.json
+│   │   └── experiments.csv
+│   └── pubmedbert_metrics/
 │       ├── model_3epochs.json
 │       ├── model_5epochs.json
-│       ├── model_7epochs.json
 │       └── experiments.csv
 │
 ├── src/
@@ -80,7 +98,7 @@ Medical_Text_Analysis/
 │   │   ├── train.py
 │   │   ├── evaluate.py
 │   │   └── inference.py
-│   └── biobert_pipeline/
+│   └── transformer_pipeline/
 │       ├── config.py
 │       ├── dataset.py
 │       ├── train.py
@@ -131,13 +149,13 @@ python src/spacy_pipeline/inference.py
 
 ```bash
 # Fine-tune BioBERT on BC5CDR
-python -m src/biobert_pipeline/train.py
+python -m src.biobert_pipeline.train
 
 # Evaluate on test set
-python -m src/biobert_pipeline/evaluate_model.py
+python -m src.biobert_pipeline.evaluate_model
 
 # Run inference on new text
-python -m src/biobert_pipeline/predict.py
+python -m src.biobert_pipeline.predict
 ```
 
 ---
@@ -173,6 +191,7 @@ Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biob
 - PyTorch
 - HuggingFace Transformers + Datasets
 - BioBERT (`dmis-lab/biobert-v1.1`)
+- PubMedBERT (`microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext`)
 - spaCy
 - SeqEval
 - NumPy
@@ -181,7 +200,9 @@ Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biob
 
 ## Roadmap
 
-- [ ] PubMedBERT fine-tuning and comparison
+- [x] spaCy baseline NER pipeline
+- [x] BioBERT fine-tuning and epoch comparison
+- [x] PubMedBERT fine-tuning and comparison
 - [ ] LoRA parameter-efficient fine-tuning (rank 4 / 8 / 16)
 - [ ] Error analysis — characterising Chemical vs Disease failure modes
 - [ ] Relation extraction (Chemical–Disease pairs)
