@@ -11,6 +11,9 @@ Comparing classical and transformer-based Named Entity Recognition for extractin
 - **Purer domain pretraining helps more on harder entity types** — PubMedBERT improves Disease F1 by +1.57 points over BioBERT but Chemical F1 by only +0.59 points, confirming domain specificity matters most where the task is hardest
 - **PubMedBERT converges faster** — plateaus at 5 epochs vs BioBERT's 7 epochs, despite achieving higher final performance
 - **Performance plateaus are clearly observable** — BioBERT gains drop from +2.16 F1 (epochs 3→5) to +0.50 (epochs 5→7); PubMedBERT shows the same pattern one epoch earlier
+- **Transformers reduce total errors by 60%+** — driven almost entirely by false negative reduction; spaCy missed 1040 Chemical and 655 Disease entities vs PubMedBERT's 226 and 187 respectively
+- **False positives are resistant to improvement across all models** — Disease false positives actually increased from spaCy (383) to BioBERT (422) and PubMedBERT (415), indicating transformers over-predict disease-like phrases due to broader pattern recognition
+- **Disease boundary errors remain the hardest unsolved problem** — PubMedBERT still produces 341 Disease boundary errors vs only 96 on Chemical, suggesting span delimitation for disease names is a fundamental challenge not resolved by domain-specific pretraining alone
 
 ---
 
@@ -49,7 +52,25 @@ Comparing classical and transformer-based Named Entity Recognition for extractin
 
 ---
 
-## Overview
+## Error Analysis
+
+Errors were categorized into four types across all three models on the BC5CDR test set — boundary errors (correct entity type, wrong span), overlap errors (nested or overlapping spans), false positives (predicted where no entity exists), and false negatives (missed entities entirely).
+
+### Error Counts by Model and Entity Type
+
+| Error Type | spaCy Chem | BioBERT Chem | PubMedBERT Chem | spaCy Dis | BioBERT Dis | PubMedBERT Dis |
+|---|---|---|---|---|---|---|
+| Boundary Errors | 140 | 120 | 96 | 457 | 370 | 341 |
+| Overlap Errors | 116 | 14 | 22 | 55 | 19 | 10 |
+| False Positives | 336 | 295 | 284 | 383 | 422 | 415 |
+| False Negatives | 1040 | 243 | 226 | 655 | 245 | 187 |
+| **Total** | **1632** | **672** | **628** | **1550** | **1056** | **953** |
+
+### Analysis
+
+Transformer models reduce total errors by over 60% compared to spaCy, with false negatives showing the sharpest decline — from 1040 to 226 on Chemical and 655 to 187 on Disease — indicating that biomedical pretraining dramatically improves entity recall. Overlap errors, a spaCy-specific failure mode (116 on Chemical), nearly disappear with transformers (14–22), showing that attention-based models handle entity span boundaries far more cleanly.
+
+However, false positives proved resistant to improvement across all models. Disease false positives actually increased from spaCy (383) to BioBERT (422) and PubMedBERT (415), suggesting transformers over-predict disease-like phrases due to broader pattern recognition — recognising more biomedical context but sometimes too aggressively. Boundary errors on Disease entities remained persistently high (341 in PubMedBERT vs 96 for Chemical), indicating that disease span delimitation is a fundamental challenge not resolved by domain-specific pretraining alone. These findings motivate future work on false positive reduction and boundary detection, potentially through CRF decoding layers or abbreviation-aware preprocessing.
 
 This project builds a complete biomedical NER pipeline — from data preprocessing through model training and evaluation — and compares a classical spaCy-based approach against fine-tuned BioBERT on the BC5CDR benchmark.
 
@@ -85,10 +106,14 @@ Medical_Text_Analysis/
 │   │   ├── model_5epochs.json
 │   │   ├── model_7epochs.json
 │   │   └── experiments.csv
-│   └── pubmedbert_metrics/
-│       ├── model_3epochs.json
-│       ├── model_5epochs.json
-│       └── experiments.csv
+│   ├── pubmedbert_metrics/
+│   │   ├── model_3epochs.json
+│   │   ├── model_5epochs.json
+│   │   └── experiments.csv
+│   └── error_analysis/
+│       ├── spacy_errors.json
+│       ├── biobert_errors.json
+│       └── pubmedbert_errors.json
 │
 ├── src/
 │   ├── common/
@@ -203,10 +228,8 @@ Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biob
 - [x] spaCy baseline NER pipeline
 - [x] BioBERT fine-tuning and epoch comparison
 - [x] PubMedBERT fine-tuning and comparison
+- [x] Error analysis — characterising Chemical vs Disease failure modes
 - [ ] LoRA parameter-efficient fine-tuning (rank 4 / 8 / 16)
-- [ ] Error analysis — characterising Chemical vs Disease failure modes
-- [ ] Relation extraction (Chemical–Disease pairs)
-- [ ] Gradio inference demo
 
 ---
 

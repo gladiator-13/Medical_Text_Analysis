@@ -2,7 +2,7 @@ import json
 import spacy
 from spacy.training import Example
 
-model_path = "models/biomedical_ner"
+model_path = "models/spacy/biomedical_ner"
 nlp = spacy.load(model_path)
 print("Model loaded successfully!")
 

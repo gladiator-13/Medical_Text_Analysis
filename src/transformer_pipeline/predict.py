@@ -8,16 +8,16 @@ from transformers import (
 from config import ID2LABEL
 
 
-MODEL_PATH = "models/biobert/final_model"
+# MODEL_PATH = "models/biobert/final_model"
 
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+# tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
 
-model = AutoModelForTokenClassification.from_pretrained(
-    MODEL_PATH
-)
+# model = AutoModelForTokenClassification.from_pretrained(
+#     MODEL_PATH
+# )
 
-model.eval()
+# model.eval()
 
 
 def predict(text):
