@@ -234,8 +234,13 @@ def transformer_dataset():
         texts.append(text)
         gold_entities.append(annotation["entities"])
 
+    transformer_tokenizer = {
+        "biobert" : "dmis-lab/biobert-v1.1",
+        "pubmed" : "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
+    }
+
     tokenizer = AutoTokenizer.from_pretrained(
-        "dmis-lab/biobert-v1.1"
+        transformer_tokenizer["pubmed"]
     )
     model = AutoModelForTokenClassification.from_pretrained(
         "models/biobert/model_7epoch"

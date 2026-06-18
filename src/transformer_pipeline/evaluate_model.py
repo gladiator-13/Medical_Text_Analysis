@@ -19,6 +19,19 @@ def main():
 
     dataset = get_tokenized_dataset()
 
+    # For LoRA model
+    # base_model = AutoModelForTokenClassification.from_pretrained(
+    #   "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext",
+    #   num_labels=len(ID2LABEL),
+    #   id2label=ID2LABEL,
+    #   label2id=LABEL2ID,
+    # )
+
+    # model = PeftModel.from_pretrained(
+    #   base_model,
+    #   "/content/models/pubmedbert_rank16_epoch5"
+    # )
+
     model = AutoModelForTokenClassification.from_pretrained(
         "models/pubmed_bert/pubmedmodel_5epoch"
     )

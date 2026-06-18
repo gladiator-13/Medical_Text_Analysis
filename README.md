@@ -1,19 +1,19 @@
-# Biomedical NER on BC5CDR: spaCy vs BioBERT vs PubMedBERT
+# Biomedical NER on BC5CDR: spaCy vs BioBERT vs PubMedBERT + LoRA
 
-Comparing classical and transformer-based Named Entity Recognition for extracting **Chemical** and **Disease** entities from biomedical literature using the BC5CDR benchmark dataset.
+Comparing classical and transformer-based Named Entity Recognition for extracting **Chemical** and **Disease** entities from biomedical literature using the BC5CDR benchmark dataset, including a study of LoRA parameter-efficient fine-tuning.
 
 ---
 
 ## Key Findings
 
-- **Both models exceed published BioBERT baselines** — our BioBERT achieves 94.00% Chemical F1 vs published 93.47%, and our PubMedBERT achieves 94.59% vs published numbers, on clean independent implementations
-- **Disease entities are consistently harder than Chemical entities** — across all models, Disease F1 lags Chemical F1 by 8-9 points, suggesting disease names are more context-dependent and harder to identify from surface form alone
+- **Both transformer models exceed published BioBERT baselines** — BioBERT achieves 94.00% Chemical F1 vs published 93.47%, and PubMedBERT achieves 94.59%, on clean independent implementations
+- **Disease entities are consistently harder than Chemical entities** — across all models and configurations, Disease F1 lags Chemical F1 by 8-12 points, suggesting disease names are more context-dependent and harder to identify from surface form alone
 - **Purer domain pretraining helps more on harder entity types** — PubMedBERT improves Disease F1 by +1.57 points over BioBERT but Chemical F1 by only +0.59 points, confirming domain specificity matters most where the task is hardest
 - **PubMedBERT converges faster** — plateaus at 5 epochs vs BioBERT's 7 epochs, despite achieving higher final performance
-- **Performance plateaus are clearly observable** — BioBERT gains drop from +2.16 F1 (epochs 3→5) to +0.50 (epochs 5→7); PubMedBERT shows the same pattern one epoch earlier
-- **Transformers reduce total errors by 60%+** — driven almost entirely by false negative reduction; spaCy missed 1040 Chemical and 655 Disease entities vs PubMedBERT's 226 and 187 respectively
-- **False positives are resistant to improvement across all models** — Disease false positives actually increased from spaCy (383) to BioBERT (422) and PubMedBERT (415), indicating transformers over-predict disease-like phrases due to broader pattern recognition
-- **Disease boundary errors remain the hardest unsolved problem** — PubMedBERT still produces 341 Disease boundary errors vs only 96 on Chemical, suggesting span delimitation for disease names is a fundamental challenge not resolved by domain-specific pretraining alone
+- **LoRA retains strong Chemical performance at any rank** — Chemical F1 stays above 93.2% across all LoRA configurations (vs 94.59% full fine-tuning), a drop of only ~1.3 points with 98%+ parameter reduction
+- **Disease is disproportionately sensitive to parameter reduction** — Disease F1 drops 3.29 points at r=4 vs only 1.32 points on Chemical, confirming harder entities need more model capacity
+- **Rank matters almost exclusively for Disease** — increasing rank from 4→16 improves Disease F1 by +1.95 points but Chemical F1 by only +0.03 points
+- **Transformers reduce total errors by 60%+** — false negatives drop from 1040→226 on Chemical and 655→187 on Disease; however Disease false positives actually increased from spaCy (383) to transformers (~415), indicating over-prediction of disease-like phrases
 
 ---
 
@@ -34,21 +34,30 @@ Comparing classical and transformer-based Named Entity Recognition for extractin
 | 3 | 88.81% | 91.48% | 90.13% | 94.38% | 84.87% |
 | **5** | **89.79%** | **91.51%** | **90.64%** | **94.59%** | **85.70%** |
 
-### Model Comparison vs Published Baselines
+### LoRA Fine-Tuning vs Full Fine-Tuning (PubMedBERT base)
+
+| Method | Trainable Params | Chemical F1 | Disease F1 | Overall F1 | vs Full FT |
+|--------|-----------------|-------------|------------|------------|------------|
+| Full fine-tune | 100% | 94.59% | 85.70% | 90.64% | — |
+| LoRA r=4 (5 epochs) | ~0.4% | 93.24% | 80.46% | 87.49% | -3.15 |
+| LoRA r=4 (7 epochs) | ~0.4% | 93.42% | 81.20% | 87.95% | -2.69 |
+| LoRA r=8 (5 epochs) | ~0.8% | 93.24% | 81.50% | 87.97% | -2.67 |
+| LoRA r=16 (5 epochs) | ~1.5% | 93.27% | 82.41% | 88.42% | -2.22 |
+
+### Full Model Comparison vs Published Baselines
 
 | Model | Chemical F1 | Disease F1 | Overall F1 |
 |-------|-------------|------------|------------|
 | spaCy (baseline) | 81.73% | 75.41% | 78.81% |
 | BioBERT (7 epochs) | 94.00% | 84.13% | 89.61% |
-| PubMedBERT (5 epochs) | **94.59%** | **85.70%** | **90.64%** |
+| **PubMedBERT (5 epochs)** | **94.59%** | **85.70%** | **90.64%** |
+| LoRA r=16 (best LoRA) | 93.27% | 82.41% | 88.42% |
 | Published SciSpaCy *(Sohail et al., 2024)* | — | — | 85.53% |
 | Published BioBERT *(Sohail et al., 2024)* | — | — | 87.83% |
 | Published BioBERT v1.1 *(Lee et al., 2020)* | 93.47% | 87.15% | — |
-| LoRA r=4 | — | — | — |
-| LoRA r=8 | — | — | — |
-| LoRA r=16 | — | — | — |
+| BioALBERT *(Naseem et al., 2021)* | 97.90% | 97.66% | — |
 
-> **References:** Lee et al. (2020) *BioBERT: a pre-trained biomedical language representation model*; Sohail et al. (2024) *Exploring Biomedical Named Entity Recognition via SciSpaCy and BioBERT Models*
+> **References:** Lee et al. (2020) *BioBERT: a pre-trained biomedical language representation model*; Sohail et al. (2024) *Exploring Biomedical Named Entity Recognition via SciSpaCy and BioBERT Models*; Naseem et al. (2021) *BioALBERT: A Simple and Effective Pre-trained Language Model for Biomedical NER*
 
 ---
 
@@ -68,11 +77,15 @@ Errors were categorized into four types across all three models on the BC5CDR te
 
 ### Analysis
 
-Transformer models reduce total errors by over 60% compared to spaCy, with false negatives showing the sharpest decline — from 1040 to 226 on Chemical and 655 to 187 on Disease — indicating that biomedical pretraining dramatically improves entity recall. Overlap errors, a spaCy-specific failure mode (116 on Chemical), nearly disappear with transformers (14–22), showing that attention-based models handle entity span boundaries far more cleanly.
+Transformer models reduce total errors by over 60% compared to spaCy, with false negatives showing the sharpest decline — from 1040 to 226 on Chemical and 655 to 187 on Disease — indicating that biomedical pretraining dramatically improves entity recall. Overlap errors, a spaCy-specific failure mode (116 on Chemical), nearly disappear with transformers (14–22), showing attention-based models handle entity span boundaries far more cleanly.
 
-However, false positives proved resistant to improvement across all models. Disease false positives actually increased from spaCy (383) to BioBERT (422) and PubMedBERT (415), suggesting transformers over-predict disease-like phrases due to broader pattern recognition — recognising more biomedical context but sometimes too aggressively. Boundary errors on Disease entities remained persistently high (341 in PubMedBERT vs 96 for Chemical), indicating that disease span delimitation is a fundamental challenge not resolved by domain-specific pretraining alone. These findings motivate future work on false positive reduction and boundary detection, potentially through CRF decoding layers or abbreviation-aware preprocessing.
+However, false positives proved resistant to improvement across all models. Disease false positives actually increased from spaCy (383) to BioBERT (422) and PubMedBERT (415), suggesting transformers over-predict disease-like phrases due to broader pattern recognition. Boundary errors on Disease entities remained persistently high (341 in PubMedBERT vs 96 for Chemical), indicating that disease span delimitation is a fundamental challenge not resolved by domain-specific pretraining alone. These findings motivated the LoRA experiments and suggest future work on CRF decoding layers or boundary-aware training objectives.
 
-This project builds a complete biomedical NER pipeline — from data preprocessing through model training and evaluation — and compares a classical spaCy-based approach against fine-tuned BioBERT on the BC5CDR benchmark.
+---
+
+## Overview
+
+This project builds a complete biomedical NER pipeline — from data preprocessing through model training, evaluation, error analysis, and parameter-efficient fine-tuning — comparing a classical spaCy-based approach against fine-tuned transformer models on the BC5CDR benchmark.
 
 The BC5CDR dataset contains biomedical research abstracts annotated with two entity types:
 - **Chemical** — drug names, chemical compounds (e.g. "acetaminophen", "sodium chloride")
@@ -90,13 +103,17 @@ Medical_Text_Analysis/
 │       └── spacy/
 │
 ├── models/
+│   ├── spacy/
+│   ├── lora/
 │   ├── biobert/
 │   └── pubmedbert/
 │
 ├── notebooks/
 │   ├── biobert_pipeline.ipynb
 │   ├── biobert_training.ipynb
-│   └── pubmedbert_training.ipynb
+│   ├── error_analysis.ipynb
+│   ├── medical_ner_exploration.ipynb
+│   └── lora_experiments.ipynb
 │
 ├── results/
 │   ├── spacy_metrics/
@@ -110,6 +127,12 @@ Medical_Text_Analysis/
 │   │   ├── model_3epochs.json
 │   │   ├── model_5epochs.json
 │   │   └── experiments.csv
+│   ├── lora_metrics/
+│   │   ├── lora_rank4_epoch5.json
+│   │   ├── lora_rank4_epoch7.json
+│   │   ├── lora_rank8_epoch5.json
+│   │   ├── lora_rank16_epoch5.json
+│   │   └── lora_experiments.csv
 │   └── error_analysis/
 │       ├── spacy_errors.json
 │       ├── biobert_errors.json
@@ -117,7 +140,8 @@ Medical_Text_Analysis/
 │
 ├── src/
 │   ├── common/
-│   │   └── utils.py
+│   │   ├── utils.py
+│   │   └── error_analysis.py
 │   ├── spacy_pipeline/
 │   │   ├── preprocessing.py
 │   │   ├── train.py
@@ -131,7 +155,9 @@ Medical_Text_Analysis/
 │       ├── evaluate_model.py
 │       ├── save_metrics.py
 │       ├── predict.py
-│       └── metrics.py
+│       ├── metrics.py
+│       ├── lora_config.py
+│       └── lora_train.py
 │
 ├── README.md
 ├── requirements.txt
@@ -170,17 +196,17 @@ python src/spacy_pipeline/evaluate.py
 python src/spacy_pipeline/inference.py
 ```
 
-### BioBERT Pipeline
+### Transformer Pipeline (BioBERT / PubMedBERT)
 
 ```bash
-# Fine-tune BioBERT on BC5CDR
-python -m src.biobert_pipeline.train
+# Fine-tune on BC5CDR
+python -m src.transformer_pipeline.train
 
 # Evaluate on test set
-python -m src.biobert_pipeline.evaluate_model
+python -m src.transformer_pipeline.evaluate_model
 
 # Run inference on new text
-python -m src.biobert_pipeline.predict
+python -m src.transformer_pipeline.predict
 ```
 
 ---
@@ -198,15 +224,7 @@ python -m src.biobert_pipeline.predict
 
 ## Experiment Tracking
 
-All runs are logged to:
-
-```
-results/biobert_metrics/experiments.csv
-```
-
-Each run records: epochs, precision, recall, F1, accuracy.
-
-Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biobert_metrics/`.
+All runs logged to CSV files per model in `results/`. Each run records: model, epochs, precision, recall, F1, accuracy, and entity-wise F1. Per-run detailed metrics stored as JSON files alongside each CSV.
 
 ---
 
@@ -214,7 +232,7 @@ Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biob
 
 - Python
 - PyTorch
-- HuggingFace Transformers + Datasets
+- HuggingFace Transformers + Datasets + PEFT
 - BioBERT (`dmis-lab/biobert-v1.1`)
 - PubMedBERT (`microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext`)
 - spaCy
@@ -229,7 +247,7 @@ Per-run detailed metrics (overall + entity-wise) stored as JSON in `results/biob
 - [x] BioBERT fine-tuning and epoch comparison
 - [x] PubMedBERT fine-tuning and comparison
 - [x] Error analysis — characterising Chemical vs Disease failure modes
-- [ ] LoRA parameter-efficient fine-tuning (rank 4 / 8 / 16)
+- [x] LoRA parameter-efficient fine-tuning (rank 4 / 8 / 16)
 
 ---
 
