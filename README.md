@@ -169,7 +169,7 @@ Medical_Text_Analysis/
 ## Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/gladiator-13/Medical_Text_Analysis
 cd Medical_Text_Analysis
 python -m venv venv
 source venv/bin/activate       # On Windows: venv\Scripts\activate
